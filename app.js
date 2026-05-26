@@ -200,7 +200,12 @@ function cacheElements() {
     "ar-summary-svg",
     "ar-apply-preview",
     "ar-apply-confirmation",
-    "ar-apply-button"
+    "ar-apply-button",
+    "ar-xr-overlay",
+    "ar-overlay-hit-status",
+    "ar-overlay-point-count",
+    "ar-overlay-delete-last-button",
+    "ar-overlay-end-button"
   ].forEach((id) => {
     elements[toCamelCase(id)] = document.getElementById(id);
   });
@@ -267,8 +272,10 @@ function bindEvents() {
   elements.arCheckButton.addEventListener("click", checkARSupport);
   elements.arStartButton.addEventListener("click", startARSession);
   elements.arEndButton.addEventListener("click", endARSession);
+  elements.arOverlayEndButton?.addEventListener("click", endARSession);
   elements.arFallbackButton.addEventListener("click", fallbackToImageMode);
   elements.arDeleteLastButton.addEventListener("click", deleteLastARPoint);
+  elements.arOverlayDeleteLastButton?.addEventListener("click", deleteLastARPoint);
   elements.arClearPointsButton.addEventListener("click", clearARPoints);
   elements.arCreateMeasureButton.addEventListener("click", () => {
     createARMeasurement(elements.arCustomMeasureName.value, elements.arPointASelect.value, elements.arPointBSelect.value);
@@ -2151,11 +2158,16 @@ async function startARSession() {
   }
 
   try {
+    showAROverlay();
+
     const sessionOptions = {
-      requiredFeatures: ["hit-test"],
-      optionalFeatures: ["dom-overlay"],
-      domOverlay: { root: document.body }
+      requiredFeatures: ["hit-test"]
     };
+
+    if (elements.arXrOverlay) {
+      sessionOptions.optionalFeatures = ["dom-overlay"];
+      sessionOptions.domOverlay = { root: elements.arXrOverlay };
+    }
     let session;
 
     try {
@@ -2169,6 +2181,7 @@ async function startARSession() {
     arMeasurementState.session = session;
     arMeasurementState.isSessionActive = true;
     session.addEventListener("end", () => endARSession(false));
+    session.addEventListener("select", () => markCurrentARPoint("livre"));
     await setupXRWebGL(session);
     arMeasurementState.referenceSpace = await session.requestReferenceSpace("local");
     await requestHitTestSource(session);
@@ -2178,6 +2191,7 @@ async function startARSession() {
   } catch (error) {
     arMeasurementState.lastError = "Não foi possível iniciar AR neste dispositivo.";
     arMeasurementState.isSessionActive = false;
+    hideAROverlay();
     renderARStatus();
     showMessages([arMeasurementState.lastError]);
   }
@@ -2209,7 +2223,24 @@ async function endARSession(callEnd = true) {
   arMeasurementState.hitTestSource = null;
   arMeasurementState.currentHitPose = null;
   arMeasurementState.currentFrameTime = null;
+  hideAROverlay();
   renderARStatus();
+}
+
+function showAROverlay() {
+  if (elements.arXrOverlay) {
+    elements.arXrOverlay.hidden = false;
+  }
+
+  document.body.classList.add("ar-session-live");
+}
+
+function hideAROverlay() {
+  document.body.classList.remove("ar-session-live");
+
+  if (elements.arXrOverlay) {
+    elements.arXrOverlay.hidden = true;
+  }
 }
 
 async function setupXRWebGL(session) {
@@ -2456,6 +2487,26 @@ function renderARStatus() {
   elements.arStartButton.hidden = arMeasurementState.supportChecked && !arMeasurementState.isSupported;
   elements.arEndButton.disabled = !arMeasurementState.isSessionActive;
   elements.arPlaceholder.style.display = arMeasurementState.isSessionActive ? "none" : "grid";
+  renderAROverlayStatus();
+}
+
+function renderAROverlayStatus() {
+  const hitStatus = arMeasurementState.currentHitPose
+    ? "Mira encontrada. Voce pode marcar um ponto."
+    : "Mira AR aguardando superficie.";
+
+  if (elements.arOverlayHitStatus) {
+    elements.arOverlayHitStatus.textContent = hitStatus;
+  }
+
+  if (elements.arOverlayPointCount) {
+    const count = arMeasurementState.points.length;
+    elements.arOverlayPointCount.textContent = `${count} ${count === 1 ? "ponto" : "pontos"}`;
+  }
+
+  document.querySelectorAll(".ar-xr-overlay [data-ar-point-type]").forEach((button) => {
+    button.disabled = !arMeasurementState.isSessionActive || !arMeasurementState.currentHitPose;
+  });
 }
 
 function renderARPoints() {

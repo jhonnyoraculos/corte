@@ -478,6 +478,26 @@
       </section>
     </main>
 
+    <div class="ar-xr-overlay" id="ar-xr-overlay" hidden>
+      <div class="ar-xr-panel">
+        <div class="ar-xr-status">
+          <span id="ar-overlay-hit-status">Mira AR aguardando superficie.</span>
+          <strong id="ar-overlay-point-count">0 pontos</strong>
+        </div>
+        <div class="ar-xr-actions">
+          <button class="primary-button" type="button" data-ar-point-type="livre">Livre</button>
+          <button class="secondary-button" type="button" data-ar-point-type="canto-esquerdo">Esq.</button>
+          <button class="secondary-button" type="button" data-ar-point-type="canto-direito">Dir.</button>
+          <button class="secondary-button" type="button" data-ar-point-type="ponto-superior">Sup.</button>
+          <button class="secondary-button" type="button" data-ar-point-type="ponto-inferior">Inf.</button>
+          <button class="secondary-button" type="button" data-ar-point-type="profundidade-frente">Frente</button>
+          <button class="secondary-button" type="button" data-ar-point-type="profundidade-fundo">Fundo</button>
+          <button class="ghost-button" id="ar-overlay-delete-last-button" type="button">Apagar</button>
+          <button class="ghost-button" id="ar-overlay-end-button" type="button">Encerrar</button>
+        </div>
+      </div>
+    </div>
+
     <script src="app.js"></script>
   </body>
 </html>
