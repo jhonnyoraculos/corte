@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Orák Cut</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">MDF • Plano de chapa • Lista de corte</p>
+          <h1>Orák Cut</h1>
+          <p class="subtitle">Gerador simples de lista de corte e plano de chapa para MDF.</p>
+        </div>
+        <div class="brand-mark" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </header>
+
+      <section class="workspace">
+        <form class="panel input-panel" id="cut-form" novalidate>
+          <div class="panel-heading">
+            <div>
+              <h2>Dados do Projeto</h2>
+              <p>Medidas em milímetros</p>
+            </div>
+          </div>
+
+          <div class="field-grid">
+            <label class="field full">
+              <span>Nome do projeto</span>
+              <input id="project-name" name="projectName" type="text" value="Projeto MDF">
+            </label>
+
+            <label class="field">
+              <span>Cliente</span>
+              <input id="client-name" name="clientName" type="text" placeholder="Nome do cliente">
+            </label>
+
+            <label class="field">
+              <span>Ambiente</span>
+              <input id="room-name" name="roomName" type="text" placeholder="Ex.: escritório">
+            </label>
+
+            <label class="field full">
+              <span>Observações gerais</span>
+              <textarea id="general-notes" name="generalNotes" rows="3" placeholder="Anotações do projeto, material, acabamento ou montagem"></textarea>
+            </label>
+
+            <label class="field full">
+              <span>Tipo de móvel</span>
+              <select id="furniture-type" name="furnitureType">
+                <option value="niche">Nicho simples</option>
+                <option value="cabinet">Armário 2 portas</option>
+                <option value="panel">Painel simples</option>
+                <option value="desk">Mesa simples</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>Largura total</span>
+              <input id="width" name="width" type="number" min="1" step="1" value="800" required>
+            </label>
+
+            <label class="field">
+              <span>Altura total</span>
+              <input id="height" name="height" type="number" min="1" step="1" value="600" required>
+            </label>
+
+            <label class="field">
+              <span>Profundidade</span>
+              <input id="depth" name="depth" type="number" min="1" step="1" value="350" required>
+            </label>
+
+            <label class="field">
+              <span>Espessura MDF</span>
+              <input id="mdf-thickness" name="mdfThickness" type="number" min="1" step="1" value="18" required>
+            </label>
+
+            <label class="field">
+              <span>Largura da chapa</span>
+              <input id="sheet-width" name="sheetWidth" type="number" min="1" step="1" value="2750" required>
+            </label>
+
+            <label class="field">
+              <span>Altura da chapa</span>
+              <input id="sheet-height" name="sheetHeight" type="number" min="1" step="1" value="1850" required>
+            </label>
+
+            <label class="field">
+              <span>Espessura do corte</span>
+              <input id="kerf" name="kerf" type="number" min="0" step="0.1" value="3" required>
+            </label>
+
+            <label class="field">
+              <span>Quantidade de prateleiras</span>
+              <input id="shelf-count" name="shelfCount" type="number" min="0" step="1" value="1">
+            </label>
+
+            <label class="field">
+              <span>Altura do painel frontal</span>
+              <input id="front-panel-height" name="frontPanelHeight" type="number" min="1" step="1" value="400">
+            </label>
+
+            <label class="field">
+              <span>Folga entre portas</span>
+              <input id="door-gap" name="doorGap" type="number" min="0" step="0.1" value="3">
+            </label>
+
+            <label class="field">
+              <span>Folga externa portas</span>
+              <input id="outer-door-gap" name="outerDoorGap" type="number" min="0" step="0.1" value="2">
+            </label>
+
+            <label class="field">
+              <span>Espessura do fundo</span>
+              <input id="back-thickness" name="backThickness" type="number" min="1" step="1" value="6">
+            </label>
+
+            <label class="field">
+              <span>Sentido do veio</span>
+              <select id="grain-direction" name="grainDirection">
+                <option value="indiferente">Indiferente</option>
+                <option value="vertical">Vertical</option>
+                <option value="horizontal">Horizontal</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="switch-row">
+            <label class="switch">
+              <input id="use-back" name="useBack" type="checkbox" checked>
+              <span class="switch-control"></span>
+              <span>Usar fundo</span>
+            </label>
+
+            <label class="switch">
+              <input id="use-doors" name="useDoors" type="checkbox">
+              <span class="switch-control"></span>
+              <span>Usar portas</span>
+            </label>
+
+            <label class="switch">
+              <input id="auto-split-panel" name="autoSplitPanel" type="checkbox" checked>
+              <span class="switch-control"></span>
+              <span>Dividir painel</span>
+            </label>
+          </div>
+
+          <div class="photo-tools">
+            <label class="upload-field" for="photo-input">
+              <span>Foto de referência</span>
+              <input id="photo-input" type="file" accept="image/*">
+              <strong>Selecionar imagem</strong>
+            </label>
+            <button class="ghost-button small-button" id="remove-photo-button" type="button">Remover foto</button>
+          </div>
+
+          <div class="photo-preview" id="photo-preview" aria-live="polite">
+            <span>Prévia da foto</span>
+          </div>
+
+          <div class="form-actions">
+            <button class="primary-button" type="submit">Gerar cortes</button>
+            <button class="ghost-button" id="reset-button" type="reset">Limpar</button>
+          </div>
+
+          <div class="tool-actions">
+            <button class="secondary-button" id="save-project-button" type="button">Salvar projeto</button>
+            <button class="secondary-button" id="load-project-button" type="button">Carregar projeto</button>
+            <button class="ghost-button" id="clear-project-button" type="button">Limpar salvo</button>
+          </div>
+
+          <div class="tool-actions">
+            <button class="secondary-button" id="export-json-button" type="button">Exportar JSON</button>
+            <button class="secondary-button" id="import-json-button" type="button">Importar JSON</button>
+            <input id="json-input" type="file" accept="application/json,.json" hidden>
+          </div>
+
+          <div class="source-notice" id="measurement-source-notice" hidden></div>
+          <div class="message-box" id="message-box" role="alert" aria-live="polite"></div>
+        </form>
+
+        <section class="results-column" aria-live="polite">
+          <section class="panel summary-panel">
+            <div class="panel-heading">
+              <div>
+                <h2>Resumo do Projeto</h2>
+                <p id="result-project-name">Nenhum plano gerado</p>
+              </div>
+              <button class="print-button" id="print-button" type="button" disabled>Imprimir / PDF</button>
+            </div>
+
+            <div class="project-summary" id="project-summary">
+              <span>Gere um plano para visualizar os dados do projeto.</span>
+            </div>
+
+            <div class="summary-grid" id="summary-grid">
+              <article><span>Área total</span><strong>0,00 m²</strong></article>
+              <article><span>Área usada</span><strong>0,00 m²</strong></article>
+              <article><span>Sobra</span><strong>0,00 m²</strong></article>
+              <article><span>Aproveitamento</span><strong>0%</strong></article>
+              <article><span>Chapas</span><strong>0</strong></article>
+              <article><span>Fita de borda</span><strong>0,00 m</strong></article>
+            </div>
+          </section>
+
+          <section class="panel image-panel" id="image-analysis-section">
+            <div class="panel-heading">
+              <div>
+                <h2>Leitura por Imagem</h2>
+                <p>Estimativa assistida por foto, com confirmação manual obrigatória</p>
+              </div>
+            </div>
+
+            <div class="image-workbench">
+              <div class="image-canvas-card">
+                <div class="image-upload-row">
+                  <label class="upload-field" for="image-analysis-input">
+                    <span>Foto para análise</span>
+                    <input id="image-analysis-input" type="file" accept="image/*">
+                    <strong>Selecionar imagem</strong>
+                  </label>
+                  <button class="ghost-button small-button" id="image-remove-button" type="button">Remover</button>
+                </div>
+
+                <div class="image-toolbar">
+                  <label class="zoom-field">
+                    <span>Zoom</span>
+                    <input id="image-zoom" type="range" min="0.4" max="3" step="0.05" value="1">
+                  </label>
+                  <button class="secondary-button" id="image-analyze-button" type="button" disabled>Analisar bordas</button>
+                  <button class="ghost-button" id="image-reset-button" type="button">Resetar análise</button>
+                </div>
+
+                <div class="image-canvas-wrap">
+                  <canvas id="image-canvas" width="980" height="620"></canvas>
+                  <div class="canvas-empty" id="canvas-empty">Envie uma foto para iniciar a leitura assistida.</div>
+                </div>
+              </div>
+
+              <aside class="image-side-panel">
+                <div class="image-mode-group" role="group" aria-label="Modo de marcação">
+                  <button class="mode-button active" type="button" data-image-mode="reference">Referência</button>
+                  <button class="mode-button" type="button" data-image-mode="measurement">Medição</button>
+                </div>
+
+                <section class="image-box">
+                  <h3>Pontos de referência</h3>
+                  <p>Clique em dois pontos de uma medida conhecida, como a largura real do móvel.</p>
+                  <div class="analysis-metric" id="reference-status">Nenhum ponto marcado.</div>
+                  <label class="field">
+                    <span>Medida real entre os pontos</span>
+                    <input id="reference-real-mm" type="number" min="1" step="1" placeholder="Ex.: 1200">
+                  </label>
+                  <div class="analysis-metric" id="scale-status">Escala ainda não definida.</div>
+                </section>
+
+                <section class="image-box">
+                  <h3>Medições</h3>
+                  <label class="field">
+                    <span>Nome da próxima medição</span>
+                    <input id="measurement-label" type="text" value="largura total">
+                  </label>
+                  <div class="analysis-metric" id="measurement-status">Defina a escala e clique em dois pontos.</div>
+                  <div class="measurement-list" id="measurement-list"></div>
+                </section>
+
+                <section class="image-box">
+                  <h3>Sugestão assistida</h3>
+                  <div class="suggestion-card" id="image-suggestion">Tipo sugerido: aguardando análise.</div>
+                  <div class="apply-preview" id="image-apply-preview">Nenhuma medida pronta para aplicar.</div>
+                  <label class="confirm-check">
+                    <input id="image-confirmation" type="checkbox">
+                    <span>Conferi e confirmo as medidas.</span>
+                  </label>
+                  <button class="primary-button" id="apply-image-measures-button" type="button" disabled>Usar medidas detectadas</button>
+                </section>
+
+                <section class="image-warnings">
+                  <strong>Avisos técnicos</strong>
+                  <ul>
+                    <li>Foto em perspectiva pode gerar medidas erradas.</li>
+                    <li>Use uma foto frontal sempre que possível.</li>
+                    <li>A leitura por imagem é apenas estimativa.</li>
+                    <li>Sempre confira com trena antes de enviar para produção.</li>
+                    <li>Profundidade dificilmente é confiável por foto frontal.</li>
+                  </ul>
+                </section>
+              </aside>
+            </div>
+          </section>
+
+          <section class="panel ar-panel" id="ar-measurement-section">
+            <div class="panel-heading">
+              <div>
+                <h2>Medição AR</h2>
+                <p>Protótipo experimental com WebXR para estimar medidas no mundo real</p>
+              </div>
+            </div>
+
+            <div class="ar-workbench">
+              <div class="ar-main-card">
+                <div class="ar-status-grid">
+                  <article>
+                    <strong>Suporte WebXR</strong>
+                    <span id="ar-support-status">Ainda não verificado.</span>
+                  </article>
+                  <article>
+                    <strong>Sessão AR</strong>
+                    <span id="ar-session-status">Inativa.</span>
+                  </article>
+                </div>
+
+                <div class="ar-actions">
+                  <button class="secondary-button" id="ar-check-button" type="button">Verificar suporte AR</button>
+                  <button class="primary-button" id="ar-start-button" type="button" disabled>Iniciar AR</button>
+                  <button class="ghost-button" id="ar-end-button" type="button" disabled>Encerrar AR</button>
+                  <button class="ghost-button" id="ar-fallback-button" type="button">Usar leitura por imagem</button>
+                </div>
+
+                <div class="ar-canvas-wrap">
+                  <canvas id="ar-canvas"></canvas>
+                  <div class="ar-placeholder" id="ar-placeholder">
+                    Verifique o suporte AR em um celular compatível. No desktop, use a Leitura por Imagem.
+                  </div>
+                </div>
+
+                <div class="ar-hit-status" id="ar-hit-status">Mira AR aguardando superfície.</div>
+
+                <div class="ar-point-actions">
+                  <button class="secondary-button" type="button" data-ar-point-type="livre">Marcar ponto livre</button>
+                  <button class="secondary-button" type="button" data-ar-point-type="canto-esquerdo">Canto esquerdo</button>
+                  <button class="secondary-button" type="button" data-ar-point-type="canto-direito">Canto direito</button>
+                  <button class="secondary-button" type="button" data-ar-point-type="ponto-superior">Ponto superior</button>
+                  <button class="secondary-button" type="button" data-ar-point-type="ponto-inferior">Ponto inferior</button>
+                  <button class="secondary-button" type="button" data-ar-point-type="profundidade-frente">Profundidade frente</button>
+                  <button class="secondary-button" type="button" data-ar-point-type="profundidade-fundo">Profundidade fundo</button>
+                  <button class="ghost-button" id="ar-delete-last-button" type="button">Apagar último ponto</button>
+                  <button class="ghost-button" id="ar-clear-points-button" type="button">Limpar pontos</button>
+                </div>
+              </div>
+
+              <aside class="ar-side-panel">
+                <section class="ar-box">
+                  <h3>Instruções</h3>
+                  <ul>
+                    <li>Mova o celular devagar para mapear o ambiente.</li>
+                    <li>Aponte para uma superfície plana.</li>
+                    <li>Evite locais escuros e reflexos fortes.</li>
+                    <li>Marque pontos nos cantos reais do móvel ou parede.</li>
+                    <li>Confira tudo com trena antes da produção.</li>
+                  </ul>
+                </section>
+
+                <section class="ar-box">
+                  <h3>Pontos marcados</h3>
+                  <div class="ar-point-list" id="ar-point-list">
+                    <span>Nenhum ponto marcado.</span>
+                  </div>
+                </section>
+
+                <section class="ar-box">
+                  <h3>Medições AR</h3>
+                  <div class="ar-custom-measure">
+                    <input id="ar-custom-measure-name" type="text" value="medição personalizada">
+                    <select id="ar-point-a-select"></select>
+                    <select id="ar-point-b-select"></select>
+                    <button class="secondary-button" id="ar-create-measure-button" type="button">Criar medição</button>
+                  </div>
+                  <div class="ar-measurement-list" id="ar-measurement-list">
+                    <span>Nenhuma medição criada.</span>
+                  </div>
+                </section>
+
+                <section class="ar-box">
+                  <h3>Visualização 2D</h3>
+                  <div class="ar-summary-svg" id="ar-summary-svg"></div>
+                </section>
+
+                <section class="ar-box">
+                  <h3>Aplicar ao projeto</h3>
+                  <div class="apply-preview" id="ar-apply-preview">Nenhuma medida AR pronta para aplicar.</div>
+                  <label class="confirm-check">
+                    <input id="ar-apply-confirmation" type="checkbox">
+                    <span>Conferi as medidas e quero aplicar ao projeto.</span>
+                  </label>
+                  <button class="primary-button" id="ar-apply-button" type="button" disabled>Aplicar medidas ao projeto</button>
+                </section>
+
+                <section class="image-warnings">
+                  <strong>Avisos técnicos</strong>
+                  <ul>
+                    <li>Medição AR é estimativa.</li>
+                    <li>Pode haver erro por iluminação, reflexo, superfície lisa ou câmera instável.</li>
+                    <li>Não envie para máquina sem conferência manual.</li>
+                    <li>Use a AR para capturar medidas iniciais, não como única fonte final.</li>
+                  </ul>
+                </section>
+              </aside>
+            </div>
+          </section>
+
+          <section class="alerts-panel" id="alerts-panel" hidden>
+            <h2>Alertas técnicos</h2>
+            <ul id="alerts-list"></ul>
+          </section>
+
+          <section class="panel table-panel">
+            <div class="panel-heading">
+              <div>
+                <h2>Lista de Peças</h2>
+                <p id="piece-count-label">0 itens</p>
+              </div>
+              <div class="button-group">
+                <button class="secondary-button" id="add-piece-button" type="button" disabled>Adicionar peça manual</button>
+                <button class="secondary-button" id="update-plan-button" type="button" disabled>Atualizar plano de corte</button>
+                <button class="secondary-button" id="copy-button" type="button" disabled>Copiar lista</button>
+                <button class="secondary-button" id="csv-button" type="button" disabled>Exportar CSV</button>
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <table class="piece-table">
+                <thead>
+                  <tr>
+                    <th>Código</th>
+                    <th>Nome</th>
+                    <th>Qtd.</th>
+                    <th>Largura</th>
+                    <th>Altura</th>
+                    <th>Esp.</th>
+                    <th>Fita</th>
+                    <th>Observações</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="piece-table-body">
+                  <tr>
+                    <td colspan="9" class="empty-state">Gere um plano para visualizar e editar a lista.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel sheet-panel">
+            <div class="panel-heading">
+              <div>
+                <h2>Resumo das Chapas</h2>
+                <p id="sheet-count-label">0 chapas</p>
+              </div>
+            </div>
+            <div class="sheet-summary" id="sheet-summary">
+              <span>Nenhuma chapa calculada.</span>
+            </div>
+          </section>
+
+          <section class="panel plan-panel">
+            <div class="panel-heading">
+              <div>
+                <h2>Plano de Corte</h2>
+                <p>SVG escalado automaticamente</p>
+              </div>
+              <button class="secondary-button" id="download-svg-button" type="button" disabled>Baixar SVG</button>
+            </div>
+            <div class="cut-plan-scroll" id="cut-plan"></div>
+          </section>
+
+          <section class="technical-notice" id="technical-notice">
+            Este plano de corte é uma estimativa gerada automaticamente. Antes de enviar para produção ou máquina de corte, confira medidas, espessura da serra, sentido do veio, fita de borda, ferragens e regras da marcenaria.
+          </section>
+        </section>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
