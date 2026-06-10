@@ -45,6 +45,7 @@ O projeto não usa backend, banco de dados externo, IA ou dependências obrigat�
 - Aplicação das medidas AR ao formulário principal com confirmação manual.
 - Fallback para **Leitura por Imagem** quando WebXR não está disponível.
 - Exportação das medidas AR junto do JSON do projeto.
+- Exportação DXF simples do plano de corte, com chapas, peças, códigos e medidas em milímetros.
 
 ## Como usar
 
@@ -55,7 +56,7 @@ O projeto não usa backend, banco de dados externo, IA ou dependências obrigat�
 5. Clique em **Gerar cortes**.
 6. Edite a lista de peças se necessário.
 7. Clique em **Atualizar plano de corte** depois de editar peças.
-8. Exporte CSV, JSON, SVG ou use **Imprimir / PDF**.
+8. Exporte CSV, JSON, SVG, DXF ou use **Imprimir / PDF**.
 
 ## Como usar a leitura por imagem
 
@@ -161,13 +162,13 @@ O arquivo `.nojekyll` está incluído para evitar processamento pelo Jekyll e se
 - A foto enviada é apenas referência visual, sem leitura automática.
 - O algoritmo de corte é simples e não substitui um otimizador profissional.
 - A rotação automática só ocorre quando o veio está como indiferente.
+- O DXF é um desenho 2D simples para conferência e evolução do projeto; confira no software de corte antes de produzir.
 - Não calcula canal para fundo, rebaixo, ferragens, furação ou usinagem.
 - A fita de borda considera apenas o comprimento linear das bordas marcadas.
 - As medidas devem ser conferidas antes de enviar para produção.
 
 ## Próximos passos
 
-- Exportação DXF.
 - Biblioteca de ferragens.
 - Furação.
 - Canal para fundo.

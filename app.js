@@ -154,6 +154,7 @@ function cacheElements() {
     "copy-button",
     "csv-button",
     "download-svg-button",
+    "download-dxf-button",
     "print-button",
     "reset-button",
     "save-project-button",
@@ -230,6 +231,7 @@ function bindEvents() {
   elements.csvButton.addEventListener("click", () => exportCSV(state.pieces));
   elements.copyButton.addEventListener("click", copyCutList);
   elements.downloadSvgButton.addEventListener("click", downloadSVG);
+  elements.downloadDxfButton.addEventListener("click", downloadDXF);
   elements.printButton.addEventListener("click", () => window.print());
   elements.pieceTableBody.addEventListener("input", handlePieceTableInput);
   elements.pieceTableBody.addEventListener("change", handlePieceTableInput);
@@ -985,6 +987,171 @@ function downloadSVG() {
   }
 
   downloadFile(`orak-cut-${safeFilename(state.data?.projectName || "plano")}.svg`, state.lastSvgMarkup, "image/svg+xml;charset=utf-8");
+}
+
+function downloadDXF() {
+  if (!state.sheets.length) {
+    return;
+  }
+
+  const dxf = buildDXF(state.sheets, state.data);
+  downloadFile(`orak-cut-${safeFilename(state.data?.projectName || "plano")}.dxf`, dxf, "application/dxf;charset=utf-8");
+}
+
+function buildDXF(sheets, data) {
+  const entities = [];
+  const sheetGap = 500;
+  let offsetX = 0;
+
+  entities.push(
+    dxfText("TEXTOS", 0, -260, 70, `Orak Cut - ${data?.projectName || "Projeto MDF"}`),
+    dxfText("TEXTOS", 0, -370, 45, "Plano de corte em milimetros. Confira medidas antes da producao.")
+  );
+
+  sheets.forEach((sheet) => {
+    const offsetY = 0;
+    const usedArea = sheet.placements.reduce((total, placement) => total + placement.piece.width * placement.piece.height, 0);
+    const usagePercent = sheet.width * sheet.height > 0 ? (usedArea / (sheet.width * sheet.height)) * 100 : 0;
+    const title = `Chapa ${sheet.number} - ${formatMeasure(sheet.width)} x ${formatMeasure(sheet.height)} mm - ${formatPercent(usagePercent)}`;
+
+    entities.push(dxfText("TEXTOS", offsetX, offsetY + sheet.height + 120, 55, title));
+    entities.push(...dxfRectangle("CHAPA", offsetX, offsetY, sheet.width, sheet.height));
+
+    sheet.placements.forEach((placement) => {
+      const x = offsetX + placement.x;
+      const y = offsetY + sheet.height - placement.y - placement.height;
+      const piece = placement.piece;
+      const rotation = placement.rotated ? " ROT" : "";
+      const label = `${piece.expandedId} ${piece.name}`;
+      const measure = `${formatMeasure(piece.width)} x ${formatMeasure(piece.height)} mm${rotation}`;
+      const textHeight = Math.max(22, Math.min(55, Math.min(placement.width, placement.height) / 8));
+
+      entities.push(...dxfRectangle("PECAS", x, y, placement.width, placement.height));
+      entities.push(dxfText("TEXTOS", x + 18, y + placement.height - textHeight - 18, textHeight, label));
+
+      if (placement.height > textHeight * 3.1 && placement.width > 120) {
+        entities.push(dxfText("TEXTOS", x + 18, y + placement.height - textHeight * 2.5 - 18, textHeight * 0.75, measure));
+      }
+    });
+
+    offsetX += sheet.width + sheetGap;
+  });
+
+  return [
+    ...dxfSection("HEADER", [
+      "9",
+      "$INSUNITS",
+      "70",
+      "4"
+    ]),
+    ...dxfTables(),
+    "0",
+    "SECTION",
+    "2",
+    "ENTITIES",
+    ...entities.flat(),
+    "0",
+    "ENDSEC",
+    "0",
+    "EOF"
+  ].join("\r\n");
+}
+
+function dxfTables() {
+  return dxfSection("TABLES", [
+    "0",
+    "TABLE",
+    "2",
+    "LAYER",
+    "70",
+    "3",
+    ...dxfLayer("CHAPA", 8),
+    ...dxfLayer("PECAS", 5),
+    ...dxfLayer("TEXTOS", 1),
+    "0",
+    "ENDTAB"
+  ]);
+}
+
+function dxfLayer(name, color) {
+  return [
+    "0",
+    "LAYER",
+    "2",
+    name,
+    "70",
+    "0",
+    "62",
+    String(color),
+    "6",
+    "CONTINUOUS"
+  ];
+}
+
+function dxfSection(name, content) {
+  return ["0", "SECTION", "2", name, ...content, "0", "ENDSEC"];
+}
+
+function dxfRectangle(layer, x, y, width, height) {
+  return [
+    dxfLine(layer, x, y, x + width, y),
+    dxfLine(layer, x + width, y, x + width, y + height),
+    dxfLine(layer, x + width, y + height, x, y + height),
+    dxfLine(layer, x, y + height, x, y)
+  ];
+}
+
+function dxfLine(layer, x1, y1, x2, y2) {
+  return [
+    "0",
+    "LINE",
+    "8",
+    layer,
+    "10",
+    dxfNumber(x1),
+    "20",
+    dxfNumber(y1),
+    "30",
+    "0",
+    "11",
+    dxfNumber(x2),
+    "21",
+    dxfNumber(y2),
+    "31",
+    "0"
+  ];
+}
+
+function dxfText(layer, x, y, height, text) {
+  return [
+    "0",
+    "TEXT",
+    "8",
+    layer,
+    "10",
+    dxfNumber(x),
+    "20",
+    dxfNumber(y),
+    "30",
+    "0",
+    "40",
+    dxfNumber(height),
+    "1",
+    sanitizeDXFText(text)
+  ];
+}
+
+function dxfNumber(value) {
+  return roundMeasure(Number(value) || 0).toString().replace(",", ".");
+}
+
+function sanitizeDXFText(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\x20-\x7E]/g, "")
+    .replace(/[\r\n]+/g, " ")
+    .trim();
 }
 
 async function copyCutList() {
@@ -3175,6 +3342,7 @@ function setExportButtons(enabled) {
   elements.copyButton.disabled = !enabled;
   elements.csvButton.disabled = !enabled;
   elements.downloadSvgButton.disabled = !enabled;
+  elements.downloadDxfButton.disabled = !enabled;
   elements.printButton.disabled = !enabled;
 }
 
