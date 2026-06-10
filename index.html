@@ -295,6 +295,70 @@
             </div>
           </section>
 
+          <section class="panel vector-panel" id="vector-cut-section">
+            <div class="panel-heading">
+              <div>
+                <h2>Linha de Corte por Desenho</h2>
+                <p>Vetoriza imagem de alto contraste para gerar SVG e DXF de corte</p>
+              </div>
+            </div>
+
+            <div class="vector-workbench">
+              <div class="vector-canvas-card">
+                <div class="image-upload-row">
+                  <label class="upload-field" for="vector-image-input">
+                    <span>Imagem do desenho</span>
+                    <input id="vector-image-input" type="file" accept="image/*">
+                    <strong>Selecionar desenho</strong>
+                  </label>
+                  <button class="ghost-button small-button" id="vector-reset-button" type="button">Limpar</button>
+                </div>
+
+                <div class="vector-toolbar">
+                  <label class="zoom-field">
+                    <span>Limiar escuro</span>
+                    <input id="vector-threshold" type="range" min="20" max="245" step="1" value="135">
+                  </label>
+                  <label class="field compact-field">
+                    <span>Largura final mm</span>
+                    <input id="vector-width-mm" type="number" min="1" step="1" placeholder="Ex.: 1200">
+                  </label>
+                  <label class="field compact-field">
+                    <span>Ruido min. px</span>
+                    <input id="vector-min-area" type="number" min="1" step="1" value="24">
+                  </label>
+                  <button class="secondary-button" id="vectorize-button" type="button" disabled>Gerar linhas</button>
+                </div>
+
+                <div class="image-canvas-wrap vector-canvas-wrap">
+                  <canvas id="vector-canvas" width="980" height="620"></canvas>
+                  <div class="canvas-empty" id="vector-empty">Envie um desenho com fundo claro e linhas escuras.</div>
+                </div>
+              </div>
+
+              <aside class="image-side-panel">
+                <section class="image-box">
+                  <h3>Resultado</h3>
+                  <div class="analysis-metric" id="vector-status">Nenhuma imagem vetorizada.</div>
+                  <div class="button-group">
+                    <button class="secondary-button" id="download-vector-svg-button" type="button" disabled>Baixar SVG corte</button>
+                    <button class="secondary-button" id="download-vector-dxf-button" type="button" disabled>Baixar DXF corte</button>
+                  </div>
+                </section>
+
+                <section class="image-warnings">
+                  <strong>Avisos técnicos</strong>
+                  <ul>
+                    <li>Funciona melhor com desenho preto ou escuro em fundo claro.</li>
+                    <li>Ajuste o limiar até a linha vermelha acompanhar o desenho.</li>
+                    <li>Fotos com sombra, brilho ou perspectiva podem gerar linhas ruins.</li>
+                    <li>Confira o DXF no software de corte antes de produzir.</li>
+                  </ul>
+                </section>
+              </aside>
+            </div>
+          </section>
+
           <section class="panel ar-panel" id="ar-measurement-section">
             <div class="panel-heading">
               <div>

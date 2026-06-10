@@ -567,11 +567,13 @@ button:disabled {
   border: 1px solid rgba(168, 101, 19, 0.28);
 }
 
-.image-panel {
+.image-panel,
+.vector-panel {
   padding: 18px;
 }
 
-.image-workbench {
+.image-workbench,
+.vector-workbench {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
   gap: 16px;
@@ -579,12 +581,14 @@ button:disabled {
 }
 
 .image-canvas-card,
+.vector-canvas-card,
 .image-side-panel {
   min-width: 0;
 }
 
 .image-upload-row,
-.image-toolbar {
+.image-toolbar,
+.vector-toolbar {
   display: flex;
   align-items: end;
   gap: 10px;
@@ -595,6 +599,11 @@ button:disabled {
 .image-upload-row .upload-field {
   min-width: 240px;
   flex: 1;
+}
+
+.compact-field {
+  min-width: 150px;
+  flex: 0 1 170px;
 }
 
 .zoom-field {
@@ -633,6 +642,14 @@ button:disabled {
   height: auto;
   min-height: 320px;
   cursor: crosshair;
+}
+
+#vector-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 320px;
+  background: #fff;
 }
 
 .canvas-empty {
@@ -1217,6 +1234,10 @@ tbody tr:last-child td {
     grid-template-columns: 1fr;
   }
 
+  .vector-workbench {
+    grid-template-columns: 1fr;
+  }
+
   .ar-workbench {
     grid-template-columns: 1fr;
   }
@@ -1343,6 +1364,7 @@ tbody tr:last-child td {
   .brand-mark,
   .input-panel,
   .image-panel,
+  .vector-panel,
   .ar-panel,
   .button-group,
   .print-button,

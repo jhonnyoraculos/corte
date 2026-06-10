@@ -46,6 +46,7 @@ O projeto não usa backend, banco de dados externo, IA ou dependências obrigat�
 - Fallback para **Leitura por Imagem** quando WebXR não está disponível.
 - Exportação das medidas AR junto do JSON do projeto.
 - Exportação DXF simples do plano de corte, com chapas, peças, códigos e medidas em milímetros.
+- Vetorização experimental de desenho/imagem para gerar linhas de corte em SVG e DXF.
 
 ## Como usar
 
@@ -57,6 +58,17 @@ O projeto não usa backend, banco de dados externo, IA ou dependências obrigat�
 6. Edite a lista de peças se necessário.
 7. Clique em **Atualizar plano de corte** depois de editar peças.
 8. Exporte CSV, JSON, SVG, DXF ou use **Imprimir / PDF**.
+
+## Como usar Linha de Corte por Desenho
+
+1. Abra a seção **Linha de Corte por Desenho**.
+2. Envie uma imagem com fundo claro e desenho escuro.
+3. Ajuste o **Limiar escuro** até a linha vermelha acompanhar o desenho.
+4. Informe a largura final em milímetros se quiser escala real no SVG/DXF.
+5. Clique em **Gerar linhas**.
+6. Baixe **SVG corte** ou **DXF corte**.
+
+Nesta versão, o sistema gera o contorno das áreas escuras. Se o desenho tiver linha grossa, o arquivo terá o contorno dessa linha grossa, não a linha central perfeita.
 
 ## Como usar a leitura por imagem
 
@@ -163,6 +175,7 @@ O arquivo `.nojekyll` está incluído para evitar processamento pelo Jekyll e se
 - O algoritmo de corte é simples e não substitui um otimizador profissional.
 - A rotação automática só ocorre quando o veio está como indiferente.
 - O DXF é um desenho 2D simples para conferência e evolução do projeto; confira no software de corte antes de produzir.
+- A linha de corte por desenho depende da qualidade da imagem e pode gerar linhas serrilhadas em fotos de baixa resolução.
 - Não calcula canal para fundo, rebaixo, ferragens, furação ou usinagem.
 - A fita de borda considera apenas o comprimento linear das bordas marcadas.
 - As medidas devem ser conferidas antes de enviar para produção.

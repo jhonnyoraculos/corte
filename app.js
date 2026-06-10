@@ -41,6 +41,20 @@ const projectState = {
   measurementSource: "manual"
 };
 
+const vectorTraceState = {
+  imageLoaded: false,
+  image: null,
+  fileName: "desenho",
+  displayWidth: 0,
+  displayHeight: 0,
+  threshold: 135,
+  minArea: 24,
+  widthMm: null,
+  mmPerPixel: 1,
+  segments: [],
+  svgMarkup: ""
+};
+
 const arMeasurementState = {
   isSupported: false,
   supportChecked: false,
@@ -180,6 +194,17 @@ function cacheElements() {
     "image-apply-preview",
     "image-confirmation",
     "apply-image-measures-button",
+    "vector-image-input",
+    "vector-reset-button",
+    "vector-threshold",
+    "vector-width-mm",
+    "vector-min-area",
+    "vectorize-button",
+    "vector-canvas",
+    "vector-empty",
+    "vector-status",
+    "download-vector-svg-button",
+    "download-vector-dxf-button",
     "measurement-source-notice",
     "ar-check-button",
     "ar-start-button",
@@ -271,6 +296,26 @@ function bindEvents() {
   elements.imageCanvas.addEventListener("pointermove", handleCanvasPointerMove);
   elements.imageCanvas.addEventListener("pointerup", handleCanvasPointerUp);
   elements.imageCanvas.addEventListener("pointerleave", handleCanvasPointerUp);
+  elements.vectorImageInput.addEventListener("change", loadVectorImage);
+  elements.vectorResetButton.addEventListener("click", resetVectorTrace);
+  elements.vectorThreshold.addEventListener("input", () => {
+    vectorTraceState.threshold = Number.parseInt(elements.vectorThreshold.value, 10) || 135;
+    vectorTraceState.segments = [];
+    vectorTraceState.svgMarkup = "";
+    setVectorExportButtons(false);
+    drawVectorPreview(false);
+  });
+  elements.vectorWidthMm.addEventListener("input", updateVectorScale);
+  elements.vectorMinArea.addEventListener("input", () => {
+    vectorTraceState.minArea = Math.max(1, Number.parseInt(elements.vectorMinArea.value, 10) || 1);
+    vectorTraceState.segments = [];
+    vectorTraceState.svgMarkup = "";
+    setVectorExportButtons(false);
+    drawVectorPreview(false);
+  });
+  elements.vectorizeButton.addEventListener("click", vectorizeImageToCutLines);
+  elements.downloadVectorSvgButton.addEventListener("click", downloadVectorSVG);
+  elements.downloadVectorDxfButton.addEventListener("click", downloadVectorDXF);
   elements.arCheckButton.addEventListener("click", checkARSupport);
   elements.arStartButton.addEventListener("click", startARSession);
   elements.arEndButton.addEventListener("click", endARSession);
@@ -2280,6 +2325,356 @@ function requireImageMeasurementConfirmation() {
   renderAlerts([{ type: "warning", message }]);
   showMessages([`${message} Marque “Conferi e confirmo as medidas.” na seção Leitura por Imagem.`]);
   return false;
+}
+
+function loadVectorImage(event) {
+  const file = event.target.files?.[0];
+
+  if (!file) {
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = () => {
+    const image = new Image();
+
+    image.onload = () => {
+      vectorTraceState.imageLoaded = true;
+      vectorTraceState.image = image;
+      vectorTraceState.fileName = file.name.replace(/\.[^.]+$/, "") || "desenho";
+      vectorTraceState.segments = [];
+      vectorTraceState.svgMarkup = "";
+      fitVectorCanvasToImage(image);
+      updateVectorScale();
+      drawVectorPreview(false);
+      renderVectorStatus("Imagem carregada. Ajuste o limiar e clique em Gerar linhas.");
+      setVectorExportButtons(false);
+      elements.vectorizeButton.disabled = false;
+      elements.vectorEmpty.style.display = "none";
+    };
+
+    image.src = String(reader.result);
+  };
+
+  reader.readAsDataURL(file);
+}
+
+function resetVectorTrace() {
+  vectorTraceState.imageLoaded = false;
+  vectorTraceState.image = null;
+  vectorTraceState.fileName = "desenho";
+  vectorTraceState.displayWidth = 0;
+  vectorTraceState.displayHeight = 0;
+  vectorTraceState.segments = [];
+  vectorTraceState.svgMarkup = "";
+  elements.vectorImageInput.value = "";
+  elements.vectorizeButton.disabled = true;
+  setVectorExportButtons(false);
+  renderVectorStatus("Nenhuma imagem vetorizada.");
+
+  const canvas = elements.vectorCanvas;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  elements.vectorEmpty.style.display = "grid";
+}
+
+function fitVectorCanvasToImage(image) {
+  const maxDimension = 1200;
+  const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+  const width = Math.max(1, Math.round(image.naturalWidth * scale));
+  const height = Math.max(1, Math.round(image.naturalHeight * scale));
+
+  elements.vectorCanvas.width = width;
+  elements.vectorCanvas.height = height;
+  vectorTraceState.displayWidth = width;
+  vectorTraceState.displayHeight = height;
+}
+
+function updateVectorScale() {
+  const widthMm = toNumber(elements.vectorWidthMm.value);
+  vectorTraceState.widthMm = widthMm > 0 ? widthMm : null;
+  vectorTraceState.mmPerPixel = vectorTraceState.widthMm && vectorTraceState.displayWidth
+    ? vectorTraceState.widthMm / vectorTraceState.displayWidth
+    : 1;
+
+  if (vectorTraceState.segments.length) {
+    vectorTraceState.svgMarkup = buildVectorSVG(
+      vectorTraceState.segments,
+      vectorTraceState.displayWidth,
+      vectorTraceState.displayHeight,
+      vectorTraceState.mmPerPixel
+    );
+    renderVectorStatus(`${vectorTraceState.segments.length.toLocaleString("pt-BR")} linhas geradas. Escala: ${formatVectorScale()}.`);
+  }
+}
+
+function drawVectorPreview(showSegments = true) {
+  const canvas = elements.vectorCanvas;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (!vectorTraceState.imageLoaded || !vectorTraceState.image) {
+    return;
+  }
+
+  ctx.drawImage(vectorTraceState.image, 0, 0, canvas.width, canvas.height);
+
+  if (!showSegments || !vectorTraceState.segments.length) {
+    return;
+  }
+
+  ctx.save();
+  ctx.lineWidth = Math.max(1, Math.min(3, Math.max(canvas.width, canvas.height) / 460));
+  ctx.strokeStyle = "#d20f24";
+  ctx.globalAlpha = 0.92;
+  ctx.beginPath();
+  vectorTraceState.segments.forEach((segment) => {
+    ctx.moveTo(segment.x1, segment.y1);
+    ctx.lineTo(segment.x2, segment.y2);
+  });
+  ctx.stroke();
+  ctx.restore();
+}
+
+function vectorizeImageToCutLines() {
+  if (!vectorTraceState.imageLoaded) {
+    renderVectorStatus("Envie uma imagem antes de gerar linhas.");
+    return;
+  }
+
+  vectorTraceState.threshold = Number.parseInt(elements.vectorThreshold.value, 10) || 135;
+  vectorTraceState.minArea = Math.max(1, Number.parseInt(elements.vectorMinArea.value, 10) || 1);
+  updateVectorScale();
+
+  const canvas = elements.vectorCanvas;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  ctx.drawImage(vectorTraceState.image, 0, 0, canvas.width, canvas.height);
+
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const binary = createVectorBinaryMap(imageData, vectorTraceState.threshold);
+  const cleaned = filterSmallVectorComponents(binary, canvas.width, canvas.height, vectorTraceState.minArea);
+  const segments = buildVectorBoundarySegments(cleaned, canvas.width, canvas.height);
+
+  vectorTraceState.segments = segments;
+  vectorTraceState.svgMarkup = buildVectorSVG(segments, canvas.width, canvas.height, vectorTraceState.mmPerPixel);
+  drawVectorPreview(true);
+  setVectorExportButtons(segments.length > 0);
+  renderVectorStatus(
+    segments.length
+      ? `${segments.length.toLocaleString("pt-BR")} linhas geradas. Escala: ${formatVectorScale()}.`
+      : "Nenhuma linha detectada. Ajuste o limiar escuro e tente novamente."
+  );
+}
+
+function createVectorBinaryMap(imageData, threshold) {
+  const { data, width, height } = imageData;
+  const binary = new Uint8Array(width * height);
+
+  for (let index = 0, pixel = 0; index < data.length; index += 4, pixel += 1) {
+    const alpha = data[index + 3];
+    const brightness = data[index] * 0.299 + data[index + 1] * 0.587 + data[index + 2] * 0.114;
+    binary[pixel] = alpha > 20 && brightness <= threshold ? 1 : 0;
+  }
+
+  return binary;
+}
+
+function filterSmallVectorComponents(binary, width, height, minArea) {
+  const total = width * height;
+  const visited = new Uint8Array(total);
+  const cleaned = new Uint8Array(total);
+  const queue = new Int32Array(total);
+  const offsets = [1, -1, width, -width];
+
+  for (let start = 0; start < total; start += 1) {
+    if (!binary[start] || visited[start]) {
+      continue;
+    }
+
+    let head = 0;
+    let tail = 0;
+    visited[start] = 1;
+    queue[tail] = start;
+    tail += 1;
+
+    while (head < tail) {
+      const current = queue[head];
+      head += 1;
+      const x = current % width;
+
+      offsets.forEach((offset) => {
+        const next = current + offset;
+
+        if (next < 0 || next >= total) {
+          return;
+        }
+
+        if ((offset === 1 && x === width - 1) || (offset === -1 && x === 0)) {
+          return;
+        }
+
+        if (binary[next] && !visited[next]) {
+          visited[next] = 1;
+          queue[tail] = next;
+          tail += 1;
+        }
+      });
+    }
+
+    if (tail >= minArea) {
+      for (let index = 0; index < tail; index += 1) {
+        cleaned[queue[index]] = 1;
+      }
+    }
+  }
+
+  return cleaned;
+}
+
+function buildVectorBoundarySegments(binary, width, height) {
+  const horizontal = new Map();
+  const vertical = new Map();
+  const isDark = (x, y) => x >= 0 && y >= 0 && x < width && y < height && binary[y * width + x];
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (!isDark(x, y)) {
+        continue;
+      }
+
+      if (!isDark(x, y - 1)) addVectorInterval(horizontal, y, x, x + 1);
+      if (!isDark(x, y + 1)) addVectorInterval(horizontal, y + 1, x, x + 1);
+      if (!isDark(x - 1, y)) addVectorInterval(vertical, x, y, y + 1);
+      if (!isDark(x + 1, y)) addVectorInterval(vertical, x + 1, y, y + 1);
+    }
+  }
+
+  return [...mergeVectorIntervals(horizontal, true), ...mergeVectorIntervals(vertical, false)];
+}
+
+function addVectorInterval(map, key, start, end) {
+  if (!map.has(key)) {
+    map.set(key, []);
+  }
+
+  map.get(key).push([start, end]);
+}
+
+function mergeVectorIntervals(map, horizontal) {
+  const segments = [];
+
+  map.forEach((intervals, key) => {
+    intervals.sort((a, b) => a[0] - b[0]);
+    let current = null;
+
+    intervals.forEach((interval) => {
+      if (!current) {
+        current = [...interval];
+        return;
+      }
+
+      if (interval[0] <= current[1]) {
+        current[1] = Math.max(current[1], interval[1]);
+      } else {
+        segments.push(vectorIntervalToSegment(key, current, horizontal));
+        current = [...interval];
+      }
+    });
+
+    if (current) {
+      segments.push(vectorIntervalToSegment(key, current, horizontal));
+    }
+  });
+
+  return segments;
+}
+
+function vectorIntervalToSegment(key, interval, horizontal) {
+  return horizontal
+    ? { x1: interval[0], y1: key, x2: interval[1], y2: key }
+    : { x1: key, y1: interval[0], x2: key, y2: interval[1] };
+}
+
+function buildVectorSVG(segments, width, height, mmPerPixel) {
+  const widthMm = roundMeasure(width * mmPerPixel);
+  const heightMm = roundMeasure(height * mmPerPixel);
+  const lines = segments
+    .map((segment) => {
+      return `<line x1="${dxfNumber(segment.x1 * mmPerPixel)}" y1="${dxfNumber(segment.y1 * mmPerPixel)}" x2="${dxfNumber(segment.x2 * mmPerPixel)}" y2="${dxfNumber(segment.y2 * mmPerPixel)}"></line>`;
+    })
+    .join("");
+
+  return `
+<svg xmlns="http://www.w3.org/2000/svg" width="${widthMm}mm" height="${heightMm}mm" viewBox="0 0 ${widthMm} ${heightMm}">
+  <g fill="none" stroke="#000" stroke-width="0.1" stroke-linecap="round" stroke-linejoin="round">
+    ${lines}
+  </g>
+</svg>`.trim();
+}
+
+function downloadVectorSVG() {
+  if (!vectorTraceState.svgMarkup) {
+    return;
+  }
+
+  downloadFile(`orak-cut-vetor-${safeFilename(vectorTraceState.fileName)}.svg`, vectorTraceState.svgMarkup, "image/svg+xml;charset=utf-8");
+}
+
+function downloadVectorDXF() {
+  if (!vectorTraceState.segments.length) {
+    return;
+  }
+
+  const dxf = buildVectorDXF(vectorTraceState.segments, vectorTraceState.displayHeight, vectorTraceState.mmPerPixel);
+  downloadFile(`orak-cut-vetor-${safeFilename(vectorTraceState.fileName)}.dxf`, dxf, "application/dxf;charset=utf-8");
+}
+
+function buildVectorDXF(segments, pixelHeight, mmPerPixel) {
+  const heightMm = pixelHeight * mmPerPixel;
+  const entities = [
+    dxfText("TEXTOS", 0, heightMm + 25, 12, `Orak Cut - linhas de corte - ${vectorTraceState.fileName}`),
+    ...segments.map((segment) => {
+      return dxfLine(
+        "PECAS",
+        segment.x1 * mmPerPixel,
+        heightMm - segment.y1 * mmPerPixel,
+        segment.x2 * mmPerPixel,
+        heightMm - segment.y2 * mmPerPixel
+      );
+    })
+  ];
+
+  return [
+    ...dxfSection("HEADER", ["9", "$INSUNITS", "70", "4"]),
+    ...dxfTables(),
+    "0",
+    "SECTION",
+    "2",
+    "ENTITIES",
+    ...entities.flat(),
+    "0",
+    "ENDSEC",
+    "0",
+    "EOF"
+  ].join("\r\n");
+}
+
+function setVectorExportButtons(enabled) {
+  elements.downloadVectorSvgButton.disabled = !enabled;
+  elements.downloadVectorDxfButton.disabled = !enabled;
+}
+
+function renderVectorStatus(message) {
+  elements.vectorStatus.textContent = message;
+}
+
+function formatVectorScale() {
+  if (!vectorTraceState.widthMm) {
+    return "1 px = 1 mm";
+  }
+
+  return `largura final ${formatMeasure(vectorTraceState.widthMm)} mm`;
 }
 
 async function checkARSupport() {
