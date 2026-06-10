@@ -2533,24 +2533,167 @@ function filterSmallVectorComponents(binary, width, height, minArea) {
 }
 
 function buildVectorBoundarySegments(binary, width, height) {
-  const horizontal = new Map();
-  const vertical = new Map();
+  const segments = [];
   const isDark = (x, y) => x >= 0 && y >= 0 && x < width && y < height && binary[y * width + x];
 
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      if (!isDark(x, y)) {
-        continue;
-      }
+  for (let y = 0; y < height - 1; y += 1) {
+    for (let x = 0; x < width - 1; x += 1) {
+      const top = { x: x + 0.5, y };
+      const right = { x: x + 1, y: y + 0.5 };
+      const bottom = { x: x + 0.5, y: y + 1 };
+      const left = { x, y: y + 0.5 };
+      const mask =
+        (isDark(x, y) ? 8 : 0) |
+        (isDark(x + 1, y) ? 4 : 0) |
+        (isDark(x + 1, y + 1) ? 2 : 0) |
+        (isDark(x, y + 1) ? 1 : 0);
 
-      if (!isDark(x, y - 1)) addVectorInterval(horizontal, y, x, x + 1);
-      if (!isDark(x, y + 1)) addVectorInterval(horizontal, y + 1, x, x + 1);
-      if (!isDark(x - 1, y)) addVectorInterval(vertical, x, y, y + 1);
-      if (!isDark(x + 1, y)) addVectorInterval(vertical, x + 1, y, y + 1);
+      addMarchingSquareSegments(segments, mask, top, right, bottom, left);
     }
   }
 
-  return [...mergeVectorIntervals(horizontal, true), ...mergeVectorIntervals(vertical, false)];
+  return mergeSimilarVectorSegments(segments);
+}
+
+function addMarchingSquareSegments(segments, mask, top, right, bottom, left) {
+  const add = (pointA, pointB) => {
+    segments.push({
+      x1: pointA.x,
+      y1: pointA.y,
+      x2: pointB.x,
+      y2: pointB.y
+    });
+  };
+
+  switch (mask) {
+    case 1:
+    case 14:
+      add(left, bottom);
+      break;
+    case 2:
+    case 13:
+      add(bottom, right);
+      break;
+    case 3:
+    case 12:
+      add(left, right);
+      break;
+    case 4:
+    case 11:
+      add(top, right);
+      break;
+    case 5:
+      add(top, right);
+      add(left, bottom);
+      break;
+    case 6:
+    case 9:
+      add(top, bottom);
+      break;
+    case 7:
+    case 8:
+      add(top, left);
+      break;
+    case 10:
+      add(top, left);
+      add(bottom, right);
+      break;
+    default:
+      break;
+  }
+}
+
+function mergeSimilarVectorSegments(segments) {
+  const groups = new Map();
+
+  segments.forEach((segment) => {
+    const dx = segment.x2 - segment.x1;
+    const dy = segment.y2 - segment.y1;
+    let type = "free";
+    let key = "";
+    let start = 0;
+    let end = 0;
+
+    if (Math.abs(dy) < 0.001) {
+      type = "h";
+      key = `${type}:${dxfNumber(segment.y1)}`;
+      start = Math.min(segment.x1, segment.x2);
+      end = Math.max(segment.x1, segment.x2);
+    } else if (Math.abs(dx) < 0.001) {
+      type = "v";
+      key = `${type}:${dxfNumber(segment.x1)}`;
+      start = Math.min(segment.y1, segment.y2);
+      end = Math.max(segment.y1, segment.y2);
+    } else if (Math.abs(Math.abs(dx) - Math.abs(dy)) < 0.001) {
+      const slope = Math.sign(dx * dy) >= 0 ? 1 : -1;
+      const intercept = slope === 1 ? segment.y1 - segment.x1 : segment.y1 + segment.x1;
+      type = slope === 1 ? "d1" : "d2";
+      key = `${type}:${dxfNumber(intercept)}`;
+      start = Math.min(segment.x1, segment.x2);
+      end = Math.max(segment.x1, segment.x2);
+    } else {
+      key = `free:${segments.indexOf(segment)}`;
+      start = 0;
+      end = 1;
+    }
+
+    if (!groups.has(key)) {
+      groups.set(key, { type, key, intervals: [] });
+    }
+
+    groups.get(key).intervals.push({ start, end, original: segment });
+  });
+
+  const merged = [];
+
+  groups.forEach((group) => {
+    if (group.type === "free") {
+      group.intervals.forEach((interval) => merged.push(interval.original));
+      return;
+    }
+
+    group.intervals.sort((a, b) => a.start - b.start);
+    let current = null;
+
+    group.intervals.forEach((interval) => {
+      if (!current) {
+        current = { ...interval };
+        return;
+      }
+
+      if (interval.start <= current.end + 0.001) {
+        current.end = Math.max(current.end, interval.end);
+      } else {
+        merged.push(vectorGroupToSegment(group.key, current.start, current.end));
+        current = { ...interval };
+      }
+    });
+
+    if (current) {
+      merged.push(vectorGroupToSegment(group.key, current.start, current.end));
+    }
+  });
+
+  return merged;
+}
+
+function vectorGroupToSegment(key, start, end) {
+  const [type, rawValue] = key.split(":");
+  const value = Number(rawValue);
+
+  if (type === "h") {
+    return { x1: start, y1: value, x2: end, y2: value };
+  }
+
+  if (type === "v") {
+    return { x1: value, y1: start, x2: value, y2: end };
+  }
+
+  if (type === "d1") {
+    return { x1: start, y1: start + value, x2: end, y2: end + value };
+  }
+
+  return { x1: start, y1: value - start, x2: end, y2: value - end };
 }
 
 function addVectorInterval(map, key, start, end) {
